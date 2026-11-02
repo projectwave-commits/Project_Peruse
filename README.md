@@ -40,8 +40,8 @@ Use this when the server already hosts another site, so the app appears at an ad
 2. Run the install script as above, then, as administrator:
    `powershell -ExecutionPolicy Bypass -File scripts\setup-nginx.ps1`
 
-That script backs up `nginx.conf`, adds the route, and reloads nginx only if `nginx -t` passes, so the other
-site stays up. The route accepts school addresses (`10.x.x.x`) only. If the same nginx is also shared
+That script backs up `nginx.conf`, adds the route, and applies it only if `nginx -t` passes. If nginx runs as
+a Windows service, the other site is down for a few seconds while the service restarts. The route accepts school addresses (`10.x.x.x`) only. If the same nginx is also shared
 through a tunnel such as ngrok, the tunnel gets 403 at this path, so the records stay on the school network.
 Check that from outside after any change. If the server's address changes, update it in the config.
 

@@ -328,8 +328,8 @@ function renderSearch() {
     mainClass: 'doodle-page',
     actions: h('a', { class: 'icon-btn account-link', href: '#/account', 'aria-label': `Account: ${me.username}` }, me.username),
   }, h('div', { class: 'search-wrap' }, input),
-  h('a', { class: 'btn block', href: '#/bulk' }, 'Bulk upload'),
-  results);
+  results,
+  h('a', { class: 'btn primary bulk-link', href: '#/bulk' }, 'Bulk upload'));
   run(lastSearch);
   input.focus();
   input.select();

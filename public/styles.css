@@ -147,6 +147,9 @@ label.check { display: flex; align-items: flex-start; gap: 10px; font-size: 15px
 .search-wrap { position: sticky; top: 56px; z-index: 4; margin: -14px -14px 0; padding: 12px 14px; }
 /* Doodles belong to the Find page only. Fixed, so they stay put behind the results. */
 .doodle-page::before { content: ""; position: fixed; inset: 0; z-index: -1; background: url(doodles.svg) center top / 360px 360px; }
+/* Sits just above the bottom tabs; the extra padding keeps the last result clear of it. */
+.doodle-page { padding-bottom: calc(var(--nav-height) + 96px + env(safe-area-inset-bottom)); }
+.bulk-link { position: fixed; left: 14px; right: 14px; bottom: calc(var(--nav-height) + 12px + env(safe-area-inset-bottom)); z-index: 5; max-width: 692px; margin: 0 auto; box-shadow: 0 2px 8px rgba(0, 0, 0, .25); }
 .find-hero { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 12px; background: rgba(243, 245, 249, .9); border-radius: var(--radius); text-align: center; }
 .find-hero img { max-width: 70%; height: auto; }
 .find-hero h2 { font-size: 21px; color: var(--navy-dark); }

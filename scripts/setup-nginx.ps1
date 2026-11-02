@@ -1,5 +1,6 @@
 #Requires -RunAsAdministrator
-# Adds the app's route to an existing nginx without disturbing the site already there.
+# Adds the app's route to an existing nginx. The site already there is down for a few seconds
+# if nginx runs as a Windows service, because a service can only be updated by restarting it.
 # Backs up nginx.conf first, and restores it if nginx rejects the result. Safe to run again.
 
 param([string]$NginxDir = 'C:\tools\nginx-1.31.3')
@@ -12,10 +13,8 @@ $exe = Join-Path $NginxDir 'nginx.exe'
 $backup = "$conf.before-prefects-$(Get-Date -Format yyyyMMdd-HHmmss)"
 
 function Test-Nginx {
-    # nginx writes its normal result to stderr.
-    $ErrorActionPreference = 'Continue'
-    $output = & $exe -p $NginxDir -t 2>&1 | Out-String
-    Write-Host $output
+    # nginx writes its normal result to stderr, which cmd passes on as plain text.
+    Write-Host (cmd /c "`"$exe`" -p `"$NginxDir`" -t 2>&1" | Out-String)
     return ($LASTEXITCODE -eq 0)
 }
 
@@ -40,9 +39,18 @@ if (-not (Test-Nginx)) {
     throw 'nginx rejected the change, so the old config was put back. Nothing was reloaded.'
 }
 
-& $exe -p $NginxDir -s reload
-if ($LASTEXITCODE -ne 0) { throw "nginx did not reload. The previous config is saved at $backup." }
-Write-Host "Route added and nginx reloaded. Previous config: $backup"
+# A reload only reaches one nginx, and a service's nginx may refuse it, so services are restarted.
+$services = @(Get-CimInstance Win32_Service | Where-Object { $_.Name -match 'nginx' -and $_.State -eq 'Running' })
+if ($services.Count) {
+    foreach ($service in $services) {
+        Restart-Service -Name $service.Name
+        Write-Host "Restarted the $($service.Name) service."
+    }
+} else {
+    cmd /c "`"$exe`" -p `"$NginxDir`" -s reload 2>&1"
+    if ($LASTEXITCODE -ne 0) { throw "nginx did not reload. The previous config is saved at $backup." }
+}
+Write-Host "Route added. Previous config: $backup"
 
 try {
     $status = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 'http://127.0.0.1:3080/').StatusCode
