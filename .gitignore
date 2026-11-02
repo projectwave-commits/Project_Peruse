@@ -1,0 +1,9 @@
+node_modules/
+data/
+.env
+*.pfx
+certs/
+*.db
+*.db-wal
+*.db-shm
+*.log

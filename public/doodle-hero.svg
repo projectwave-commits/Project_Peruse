@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="170" viewBox="0 0 220 170">
+  <g fill="none" stroke="#123f7a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- clipboard -->
+    <path d="M62 30c20-2 62-2 84 0 2 34 2 90 0 124-24 2-62 2-84 0-2-34-2-90 0-124z" fill="#ffffff"/>
+    <path d="M86 22h36c2 4 2 12 0 16H86c-2-4-2-12 0-16z" fill="#bcd6f2"/>
+    <!-- ticks and a cross, like the register -->
+    <path d="M76 62l5 6 9-12" stroke="#17693a"/>
+    <path d="M100 62c12-1 24-1 34 0"/>
+    <path d="M76 88l5 6 9-12" stroke="#17693a"/>
+    <path d="M100 88c10-1 18-1 26 0"/>
+    <path d="M77 110l11 11M88 110l-11 11" stroke="#b3261e"/>
+    <path d="M100 116c12-1 22-1 32 0"/>
+    <!-- magnifying glass -->
+    <circle cx="156" cy="110" r="24" fill="#e6eef9" fill-opacity=".85"/>
+    <path d="M173 128l22 23" stroke-width="6"/>
+    <path d="M144 104c2-6 7-9 13-9" stroke-width="2.5"/>
+    <!-- sparks -->
+    <path d="M30 40c5 7 5 13 0 20-5-7-5-13 0-20zM20 50c7-5 13-5 20 0-7 5-13 5-20 0z" stroke="#d29a12" stroke-width="2.5"/>
+    <path d="M186 28l3 8 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z" stroke="#d29a12" stroke-width="2.5"/>
+    <path d="M28 104c5-6 9-6 12 0s8 6 12 0" stroke-width="2.5"/>
+    <path d="M196 74v9M191.5 78.5h9" stroke-width="2.5"/>
+  </g>
+</svg>

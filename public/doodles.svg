@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" viewBox="0 0 360 360">
+  <g fill="none" stroke="#123f7a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity=".2">
+    <!-- pencil -->
+    <g transform="translate(26 58) rotate(-32)">
+      <path d="M0 0h46l11 7-11 7H0c-3-4-3-10 0-14z"/>
+      <path d="M46 0v14M8 0v14M52 4v6"/>
+    </g>
+    <!-- star -->
+    <path d="M135 20l6 15 16 1-12 10 4 16-14-9-14 9 4-16-12-10 16-1z"/>
+    <!-- open book -->
+    <path d="M226 44c11-7 23-7 32 0 9-7 21-7 32 0v36c-11-7-23-7-32 0-9-7-21-7-32 0z"/>
+    <path d="M258 44v36M234 54c6-2 11-2 16 0M234 64c6-2 11-2 16 0M266 54c6-2 11-2 16 0M266 64c6-2 11-2 16 0"/>
+    <!-- paper plane with trail -->
+    <path d="M36 166l52-22-18 48-11-18zM59 174l29-30"/>
+    <path d="M30 178c-9 7-13 16-9 27" stroke-dasharray="2 7"/>
+    <!-- clock -->
+    <circle cx="176" cy="150" r="24"/>
+    <path d="M176 134v16l11 7M176 120v-5M158 118l-3-4M194 118l3-4"/>
+    <!-- graduation cap -->
+    <path d="M254 152l38-15 38 15-38 15z"/>
+    <path d="M268 158v17c12 9 36 9 48 0v-17M330 152v22"/>
+    <circle cx="330" cy="178" r="3"/>
+    <!-- ruler -->
+    <g transform="translate(34 264) rotate(14)">
+      <rect width="76" height="20" rx="2"/>
+      <path d="M12 0v8M24 0v5M36 0v8M48 0v5M60 0v8"/>
+    </g>
+    <!-- laurel sprig, after the school crest -->
+    <path d="M160 322c3-22 14-40 31-52"/>
+    <path d="M166 298c-8-2-12-7-13-14 8 1 13 6 13 14zM172 284c-7-3-10-9-10-16 7 2 11 8 10 16zM181 273c-6-4-8-10-7-17 6 3 9 9 7 17zM170 303c7 2 13 0 18-6-8-2-15 0-18 6zM177 288c7 1 13-2 17-8-8-1-14 2-17 8z"/>
+    <!-- school tie -->
+    <path d="M274 236h22l-5 11 9 43-15 16-15-16 9-43z"/>
+    <path d="M279 247h12M280 262l15 6M278 276l18 7"/>
+    <!-- squiggles, sparks and dots -->
+    <path d="M96 96c6-8 11-8 15 0s9 8 15 0 11-8 15 0"/>
+    <path d="M214 214c6-8 11-8 15 0s9 8 15 0"/>
+    <path d="M312 30c5 7 5 13 0 20-5-7-5-13 0-20zM302 40c7-5 13-5 20 0-7 5-13 5-20 0z"/>
+    <path d="M120 222v14M113 229h14M18 118v10M13 123h10M340 300v10M335 305h10"/>
+    <circle cx="214" cy="110" r="2.5"/>
+    <circle cx="96" cy="330" r="2.5"/>
+    <circle cx="230" cy="326" r="2.5"/>
+    <circle cx="334" cy="96" r="2.5"/>
+  </g>
+</svg>
