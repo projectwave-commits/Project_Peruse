@@ -479,67 +479,59 @@ test('only admins can assign duty', async (t) => {
   assert.deepEqual((await p2(`/lists/${id}`)).body.duty.map((d) => d.display_name), ['Prefect Two'], 'a failed save changes nothing');
 });
 
-test('bulk upload records every student or none', async (t) => {
+test('bulk upload gives one reason to every student, or to none', async (t) => {
   const s = await startServer();
   t.after(s.close);
   const p1 = await s.as('p1');
   const p2 = await s.as('p2');
+  const admin = await s.as('admin');
   const [moyo, merwe, connor] = [s.studentId('Moyo'), s.studentId('van der Merwe'), s.studentId("O'Connor")];
-  const bulk = (who, listType, items, extra = {}) => who('/demerits/bulk', { method: 'POST', body: { listType, items, ...extra } });
+  const bulk = (who, listType, name, studentIds, extra = {}) =>
+    who('/demerits/bulk', { method: 'POST', body: { listType, offenceId: s.offenceId(name), studentIds, ...extra } });
   const count = () => s.db.prepare('SELECT COUNT(*) AS n FROM demerits').get().n;
   const nameOf = (id) => {
     const row = s.db.prepare('SELECT first_name, surname FROM students WHERE id = ?').get(id);
     return `${row.first_name} ${row.surname}`;
   };
-  const dress = 'dress';
 
-  assert.equal((await s.client().call('/demerits/bulk', { method: 'POST', body: { listType: dress, items: [] } })).status, 401);
-  assert.equal((await bulk(p1, 'nonsense', [{ studentId: moyo, offenceId: s.offenceId('Grooming') }])).status, 400);
-  assert.equal((await bulk(p1, dress, [])).status, 400);
-  const tooMany = Array.from({ length: 101 }, () => ({ studentId: moyo, offenceId: s.offenceId('Grooming') }));
-  assert.equal((await bulk(p1, dress, tooMany)).status, 400);
+  assert.equal((await s.client().call('/demerits/bulk', { method: 'POST', body: { listType: 'dress', offenceId: s.offenceId('Grooming'), studentIds: [moyo] } })).status, 401);
+  assert.equal((await bulk(p1, 'nonsense', 'Grooming', [moyo])).status, 400);
+  assert.equal((await bulk(p1, 'dress', 'Grooming', [])).status, 400);
+  assert.equal((await bulk(p1, 'dress', 'Grooming', Array(101).fill(moyo))).status, 400);
+  assert.equal((await bulk(p1, 'dress', 'Lateness', [moyo])).status, 400, 'a reason from the other list');
 
   // One bad row stops the whole batch.
-  const wrongList = await bulk(p1, dress, [
-    { studentId: moyo, offenceId: s.offenceId('Grooming') },
-    { studentId: merwe, offenceId: s.offenceId('Vaping') },
-  ]);
-  assert.equal(wrongList.status, 400);
-  assert.match(wrongList.body.error, /van der Merwe/);
-  const twice = await bulk(p1, dress, [
-    { studentId: moyo, offenceId: s.offenceId('Grooming') },
-    { studentId: moyo, offenceId: s.offenceId('Uniform') },
-  ]);
-  assert.equal(twice.status, 400);
+  assert.equal((await bulk(p1, 'dress', 'Grooming', [moyo, merwe, moyo])).status, 400);
+  assert.equal((await bulk(p1, 'dress', 'Grooming', [moyo, 99999])).status, 404);
+  assert.equal(count(), 0);
+
+  // Serious reasons are for admins only, and nothing is saved when a prefect tries one.
+  assert.equal((await bulk(p1, 'manual', 'Vaping', [moyo, merwe])).status, 403);
   assert.equal(count(), 0);
 
   await p1('/demerits', { method: 'POST', body: { studentId: moyo, offenceId: s.offenceId('Uniform') } });
-  const first = await bulk(p1, dress, [
-    { studentId: moyo, offenceId: s.offenceId('Grooming') },
-    { studentId: merwe, offenceId: s.offenceId('Grooming') },
-  ]);
+  const first = await bulk(p1, 'dress', 'Grooming', [moyo, merwe]);
   assert.equal(first.status, 201);
   assert.equal(first.body.count, 2);
   assert.equal(first.body.listName, 'Dress Parade');
   assert.deepEqual(first.body.listed, [nameOf(moyo)], 'only the student reaching two is listed');
+  const labels = s.db.prepare('SELECT DISTINCT offence_id FROM demerits WHERE student_id IN (?, ?) AND offence_id = ?').all(moyo, merwe, s.offenceId('Grooming'));
+  assert.equal(labels.length, 1);
   assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM demerits WHERE created_by = ?').get(userId(s, 'p1')).n, 3);
 
   // Another prefect reporting the same incident must confirm, and nothing is saved until then.
-  const items = [
-    { studentId: merwe, offenceId: s.offenceId('Grooming') },
-    { studentId: connor, offenceId: s.offenceId('Grooming') },
-  ];
   const before = count();
-  const repeat = await bulk(p2, dress, items);
+  const repeat = await bulk(p2, 'dress', 'Grooming', [merwe, connor]);
   assert.equal(repeat.status, 409);
   assert.equal(repeat.body.code, 'duplicate');
   assert.deepEqual(repeat.body.duplicates, [nameOf(merwe)]);
   assert.equal(count(), before);
-  assert.equal((await bulk(p2, dress, items, { confirmDuplicate: true })).status, 201);
+  assert.equal((await bulk(p2, 'dress', 'Grooming', [merwe, connor], { confirmDuplicate: true })).status, 201);
   assert.equal(count(), before + 2);
 
-  // A straight-to-list offence lists the student at once.
-  const serious = await bulk(p2, 'manual', [{ studentId: connor, offenceId: s.offenceId('Vaping') }]);
+  // An admin can use a serious reason, which lists the student at once.
+  const serious = await bulk(admin, 'manual', 'Vaping', [connor]);
+  assert.equal(serious.status, 201);
   assert.deepEqual(serious.body.listed, [nameOf(connor)]);
 });
 

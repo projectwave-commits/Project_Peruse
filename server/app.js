@@ -248,31 +248,32 @@ function createApp(db, { secureCookies = false, cookiePath = '/' } = {}) {
   api.post('/demerits/bulk', (req, res) => {
     const type = db.prepare('SELECT * FROM list_types WHERE key = ?').get(String(req.body.listType));
     if (!type) throw new HttpError(400, 'Choose Dress Parade or Manual Labour.');
-    const items = Array.isArray(req.body.items) ? req.body.items : [];
-    if (!items.length) throw new HttpError(400, 'Add at least one student.');
-    if (items.length > BULK_LIMIT) throw new HttpError(400, `Please upload at most ${BULK_LIMIT} students at a time.`);
+    const offence = db.prepare('SELECT * FROM offences WHERE id = ? AND active = 1 AND list_type = ?').get(intParam(req.body.offenceId), type.key);
+    if (!offence) throw new HttpError(400, `Choose a ${type.name} reason.`);
+    if (offence.straight_to_list && req.user.role !== 'admin') throw new HttpError(403, 'Only admins can bulk upload that reason.');
+    const studentIds = Array.isArray(req.body.studentIds) ? req.body.studentIds : [];
+    if (!studentIds.length) throw new HttpError(400, 'Add at least one student.');
+    if (studentIds.length > BULK_LIMIT) throw new HttpError(400, `Please upload at most ${BULK_LIMIT} students at a time.`);
 
     const seen = new Set();
-    const rows = items.map((item) => {
-      const student = db.prepare('SELECT id, first_name, surname FROM students WHERE id = ? AND active = 1').get(intParam(item?.studentId));
+    const rows = studentIds.map((studentId) => {
+      const student = db.prepare('SELECT id, first_name, surname FROM students WHERE id = ? AND active = 1').get(intParam(studentId));
       if (!student) throw new HttpError(404, 'One of these students is no longer active. Please remove them and try again.');
       const name = `${student.first_name} ${student.surname}`;
       if (seen.has(student.id)) throw new HttpError(400, `${name} is listed twice.`);
       seen.add(student.id);
-      const offence = db.prepare('SELECT * FROM offences WHERE id = ? AND active = 1 AND list_type = ?').get(intParam(item?.offenceId), type.key);
-      if (!offence) throw new HttpError(400, `Choose a ${type.name} reason for ${name}.`);
-      return { student, name, offence };
+      return { student, name };
     });
 
     const now = new Date();
-    const duplicates = rows.filter((r) => hasDemeritToday(r.student.id, r.offence.id, now)).map((r) => r.name);
+    const duplicates = rows.filter((r) => hasDemeritToday(r.student.id, offence.id, now)).map((r) => r.name);
     if (duplicates.length && !req.body.confirmDuplicate) {
       throw new HttpError(409, 'Some of these students already have this demerit today.', { code: 'duplicate', duplicates });
     }
 
     const listed = tx(db, () => rows.filter((r) => {
       const before = lists.tally(db, r.student.id, type).listed;
-      addDemerit(r.student.id, r.offence, { straight: r.offence.straight_to_list }, req.user, now);
+      addDemerit(r.student.id, offence, { straight: offence.straight_to_list }, req.user, now);
       return lists.tally(db, r.student.id, type).listed > before;
     })).map((r) => r.name);
     res.status(201).json({ count: rows.length, listed, listName: type.name });

@@ -19,9 +19,17 @@ if (Test-Path $envFile) {
 $action = New-ScheduledTaskAction -Execute $node -WorkingDirectory $root `
     -Argument '--disable-warning=ExperimentalWarning --env-file-if-exists=.env server/index.js'
 $trigger = New-ScheduledTaskTrigger -AtStartup
-$principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -RunLevel Limited
+# Not SYSTEM: this may share a server with more important roles.
+$account = 'NT AUTHORITY\NETWORK SERVICE'
+$principal = New-ScheduledTaskPrincipal -UserId $account -LogonType ServiceAccount -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 10 -RestartInterval (New-TimeSpan -Minutes 1)
+
+# Student records: only this account and administrators can read them.
+$data = Join-Path $root 'data'
+New-Item -ItemType Directory -Force $data | Out-Null
+icacls $data /inheritance:r /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' '*S-1-5-20:(OI)(CI)M' | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Could not set permissions on the data folder.' }
 
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
 

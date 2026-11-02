@@ -342,9 +342,9 @@ const bulkKey = () => `bulk-upload-${me.id}`;
 // Unsaved work survives leaving the page, for example to check a student's record.
 function loadBulk() {
   try {
-    return JSON.parse(sessionStorage.getItem(bulkKey())) || { type: null, rows: [] };
+    return JSON.parse(sessionStorage.getItem(bulkKey())) || { type: null, offenceId: '', rows: [] };
   } catch {
-    return { type: null, rows: [] };
+    return { type: null, offenceId: '', rows: [] };
   }
 }
 
@@ -382,16 +382,28 @@ async function renderBulk(done) {
 
   const draft = loadBulk();
   if (!catalogue.types.some((t) => t.key === draft.type)) draft.type = lastType;
-  let lastReason = '';
-  const available = () => catalogue.offences.filter((o) => o.list_type === draft.type);
-  draft.rows.forEach((r) => {
-    if (!available().some((o) => String(o.id) === r.offenceId)) r.offenceId = '';
-  });
+  // Serious reasons go straight on a list, so in bulk they are for admins only.
+  const available = () => catalogue.offences.filter((o) => o.list_type === draft.type && (me.role === 'admin' || !o.straight_to_list));
+  if (!available().some((o) => String(o.id) === draft.offenceId)) draft.offenceId = '';
 
   const typePicker = h('div', { class: 'segments', role: 'group', 'aria-label': 'Which list' });
   const results = h('div', { class: 'stack' });
   const rowsBox = h('div', { class: 'stack' });
+  const reasonBox = h('div');
   let searchToken = 0;
+
+  function drawReason() {
+    reasonBox.replaceChildren(field('Reason for everyone on this upload', h('select', {
+      name: 'bulkReason',
+      onchange: (e) => {
+        draft.offenceId = e.target.value;
+        storeBulk(draft);
+      },
+    },
+    h('option', { value: '' }, 'Choose a reason…'),
+    available().map((o) => h('option', { value: String(o.id), selected: draft.offenceId === String(o.id) ? 'selected' : null },
+      `${o.class ? `${o.class}: ` : ''}${o.name}${o.straight_to_list ? ' (straight to list)' : ''}`)))));
+  }
 
   function drawTypes() {
     typePicker.replaceChildren(...catalogue.types.map((t) =>
@@ -402,17 +414,15 @@ async function renderBulk(done) {
           if (t.key === draft.type) return;
           // Each list has its own reasons.
           draft.type = t.key;
-          lastReason = '';
-          draft.rows.forEach((r) => { r.offenceId = ''; });
+          draft.offenceId = '';
           storeBulk(draft);
           drawTypes();
-          drawRows();
+          drawReason();
         },
       }, t.name)));
   }
 
   function drawRows() {
-    const offences = available();
     rowsBox.replaceChildren(
       draft.rows.length
         ? h('div', { class: 'card tight' }, draft.rows.map((r) =>
@@ -430,18 +440,7 @@ async function renderBulk(done) {
                     storeBulk(draft);
                     drawRows();
                   },
-                }, 'Remove')),
-              h('select', {
-                'aria-label': `Reason for ${fullName(r.student)}`,
-                onchange: (e) => {
-                  r.offenceId = e.target.value;
-                  lastReason = e.target.value;
-                  storeBulk(draft);
-                },
-              },
-              h('option', { value: '' }, 'Choose a reason…'),
-              offences.map((o) => h('option', { value: String(o.id), selected: r.offenceId === String(o.id) ? 'selected' : null },
-                `${o.class ? `${o.class}: ` : ''}${o.name}${o.straight_to_list ? ' (straight to list)' : ''}`))))))
+                }, 'Remove')))))
         : h('p', { class: 'empty card' }, 'Nobody added yet. Search above and tap a student to add them.'),
       draft.rows.length
         ? h('button', { class: 'btn primary block', type: 'button', onclick: guarded(upload) },
@@ -451,22 +450,23 @@ async function renderBulk(done) {
   }
 
   async function upload() {
-    const missing = draft.rows.filter((r) => !r.offenceId);
-    if (missing.length) {
-      toast(`Choose a reason for ${missing.map((r) => fullName(r.student)).join(', ')}.`, true);
+    const reason = available().find((o) => String(o.id) === draft.offenceId);
+    if (!reason) {
+      toast('Choose a reason first.', true);
       return;
     }
     const listName = catalogue.types.find((t) => t.key === draft.type).name;
     const count = draft.rows.length;
     const sure = await confirmSheet({
       title: 'Upload all?',
-      message: `This gives ${count} demerit${count === 1 ? '' : 's'} for ${listName}.`,
+      message: `This gives ${count} demerit${count === 1 ? '' : 's'} for ${listName}: ${reason.name}.`,
       action: 'Upload',
     });
     if (!sure) return;
     const body = {
       listType: draft.type,
-      items: draft.rows.map((r) => ({ studentId: r.student.id, offenceId: Number(r.offenceId) })),
+      offenceId: reason.id,
+      studentIds: draft.rows.map((r) => r.student.id),
     };
     let result;
     try {
@@ -482,7 +482,7 @@ async function renderBulk(done) {
       result = await api('/demerits/bulk', { method: 'POST', body: { ...body, confirmDuplicate: true } });
     }
     lastType = draft.type;
-    storeBulk({ type: draft.type, rows: [] });
+    storeBulk({ type: draft.type, offenceId: '', rows: [] });
     renderBulk(result);
   }
 
@@ -502,7 +502,7 @@ async function renderBulk(done) {
                 class: 'result',
                 type: 'button',
                 onclick: () => {
-                  draft.rows.push({ student: { id: s.id, first_name: s.first_name, surname: s.surname, form: s.form }, offenceId: lastReason });
+                  draft.rows.push({ student: { id: s.id, first_name: s.first_name, surname: s.surname, form: s.form } });
                   storeBulk(draft);
                   input.value = '';
                   results.replaceChildren();
@@ -531,8 +531,9 @@ async function renderBulk(done) {
   });
 
   drawTypes();
+  drawReason();
   drawRows();
-  page('Bulk upload', opts, typePicker, input, results, rowsBox);
+  page('Bulk upload', opts, typePicker, reasonBox, input, results, rowsBox);
 }
 
 // ---- Student record and recording a demerit ----

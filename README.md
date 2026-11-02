@@ -20,13 +20,14 @@ password the first time they log in. Delete that file once the passwords have be
 
 ## Install on the school server
 
-1. Install Node.js 24 LTS, and copy this folder to the server (for example `C:\Apps\Prefects`).
+1. Install Node.js 24 LTS, and clone the `prod` branch to the server (for example `C:\Project_Peruse`).
 2. In that folder, run `npm install --omit=dev`.
 3. Right-click PowerShell, choose Run as administrator, then run:
    `powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1`
 4. Give the server a fixed IP address or a DNS name, such as `http://prefects.school.local:3080`.
 
-The script makes the app start with Windows and allows access from the server's local subnet only.
+The script makes the app start with Windows under the low-privilege Network Service account, limits the
+`data` folder to that account and administrators, and allows access from the server's local subnet only.
 If phones use a different subnet (a separate Wi-Fi network), widen the firewall rule to cover it.
 
 ### Run it behind nginx
@@ -35,11 +36,38 @@ Use this when the server already hosts another site, so the app appears at an ad
 `http://10.2.0.190/prefect/`. The steps above still apply, except that no port is opened to phones.
 
 1. Copy `.env.example` to `.env`, and set `HOST=127.0.0.1` and `COOKIE_PATH=/prefect/`. Do this before
-   running the install script. If the port is not 3080, change it in step 2 as well.
-2. Paste `scripts/nginx-prefect.conf` inside the existing `server { }` block in the nginx config.
-3. Run `nginx -t`. If it reports no errors, run `nginx -s reload`. The other site stays up.
+   running the install script. If the port is not 3080, change it in `scripts/nginx-prefect.conf` as well.
+2. Run the install script as above, then, as administrator:
+   `powershell -ExecutionPolicy Bypass -File scripts\setup-nginx.ps1`
+
+That script backs up `nginx.conf`, adds the route, and reloads nginx only if `nginx -t` passes, so the other
+site stays up. The route accepts school addresses (`10.x.x.x`) only. If the same nginx is also shared
+through a tunnel such as ngrok, the tunnel gets 403 at this path, so the records stay on the school network.
+Check that from outside after any change. If the server's address changes, update it in the config.
 
 If nginx serves HTTPS, also set `SECURE_COOKIES=1` in `.env`, and restart the app.
+
+To move to another address, change `/prefect` in `scripts/nginx-prefect.conf` and `COOKIE_PATH` in `.env`,
+run the script again, and restart the app. Everyone logs in once more, and old bookmarks stop working.
+
+### Releasing a new version
+
+`dev` is where changes are made and tested. `prod` is what the server runs, and only receives approved work.
+
+```
+git push origin dev:prod          (from the development PC, once approved)
+```
+
+Then on the server, in `C:\Project_Peruse`, as administrator:
+
+```
+git pull
+npm install --omit=dev
+schtasks /End /TN "Prefects App"
+schtasks /Run /TN "Prefects App"
+```
+
+If the push is rejected, `prod` has commits that `dev` lacks. Merge `prod` into `dev` first. Do not force-push.
 
 ### Turn on HTTPS
 
@@ -77,13 +105,14 @@ The `data` folder holds student disciplinary records. Restrict it to administrat
 - Creating a list is the cut-off. Anything recorded afterwards goes on the next list.
 - The printed list says "Hellenic Prefects" or the teacher's name. Only admins see which prefect
   recorded a demerit.
-- Prefects can give many demerits at once from Find > Bulk upload: choose the list, add students, and
-  pick a reason for each. Either all of them are recorded or none are.
+- Prefects can give many demerits at once from Find > Bulk upload: choose the list and one reason, then
+  add the students. Either all of them are recorded or none are. Reasons that go straight on a list
+  (C1) are offered to admins only.
 - Admins choose which prefects are on duty for each list.
 - Any prefect can mark a register. Each tick or cross saves straight away. Start session starts the clock
   and folds the names away; they can be opened again to make changes.
-- A student marked present after the first time on the list (6:45 AM for Dress Parade) is flagged late.
-  The flag follows the list's date and time, and has no other effect.
+- A student marked present after the first time on the list is flagged late: 6:45 AM for Dress Parade and
+  14:00 for Manual Labour, unless the list says otherwise. The flag has no other effect.
 - If a prefect who is not on duty changes a register or starts a session, the admins get an alert on the
   Admin page, one per prefect per list until dismissed.
 - Prefects on duty and admins can end the session. That marks anyone unmarked as a no-show, and
