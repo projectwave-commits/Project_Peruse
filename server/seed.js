@@ -3,7 +3,8 @@
 // Remove it all later from Admin > Students > "Remove dummy data".
 const path = require('node:path');
 const { openDb, tx } = require('./db');
-const { addUser, ensureFirstAdmin, LOGINS_FILE } = require('./setup');
+const { addUser, ensureFirstAdmin } = require('./setup');
+const { DEFAULT_PASSWORD } = require('./auth');
 const lists = require('./lists');
 
 const DATA_DIR = path.resolve(__dirname, '..', process.env.DATA_DIR || 'data');
@@ -27,7 +28,7 @@ function random(n) {
 const pick = (values) => values[random(values.length)];
 
 const db = openDb(path.join(DATA_DIR, 'prefects.db'));
-ensureFirstAdmin(db, DATA_DIR);
+ensureFirstAdmin(db);
 
 if (db.prepare('SELECT 1 AS x FROM students WHERE is_dummy = 1 LIMIT 1').get()) {
   console.log('Dummy data is already loaded. Nothing changed.');
@@ -37,7 +38,7 @@ if (db.prepare('SELECT 1 AS x FROM students WHERE is_dummy = 1 LIMIT 1').get()) 
 const prefects = [];
 for (let i = 1; i <= PREFECT_COUNT; i++) {
   const n = String(i).padStart(2, '0');
-  addUser(db, { username: `prefect${n}`, displayName: `Test Prefect ${n}`, role: 'prefect', isDummy: true }, DATA_DIR);
+  addUser(db, { username: `prefect${n}`, displayName: `Test Prefect ${n}`, role: 'prefect', isDummy: true });
   prefects.push(db.prepare('SELECT id FROM users WHERE username = ?').get(`prefect${n}`).id);
 }
 
@@ -109,5 +110,5 @@ tx(db, () => {
 });
 
 console.log(`Loaded ${studentIds.length} dummy students and ${PREFECT_COUNT} dummy prefects.`);
-console.log(`Logins are in ${path.join(DATA_DIR, LOGINS_FILE)}`);
+console.log(`Log in as prefect01 to prefect${PREFECT_COUNT} with ${DEFAULT_PASSWORD}.`);
 db.close();

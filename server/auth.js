@@ -6,6 +6,8 @@ const SESSION_MS = SESSION_DAYS * 24 * 60 * 60 * 1000;
 const MAX_FAILURES = 8;
 const LOCK_MS = 10 * 60 * 1000;
 const PASSWORD_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
+// Every new account starts with this, and must replace it at first login.
+const DEFAULT_PASSWORD = 'Password1';
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);
@@ -78,6 +80,7 @@ class LoginLimiter {
 
 module.exports = {
   SESSION_MS,
+  DEFAULT_PASSWORD,
   hashPassword,
   verifyPassword,
   tempPassword,

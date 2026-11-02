@@ -16,7 +16,7 @@ const HOST = process.env.HOST || undefined;
 const PFX = process.env.HTTPS_PFX;
 
 const db = openDb(path.join(DATA_DIR, 'prefects.db'));
-ensureFirstAdmin(db, DATA_DIR);
+ensureFirstAdmin(db);
 startBackups(db, path.join(DATA_DIR, 'backups'));
 
 const app = createApp(db, {

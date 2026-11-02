@@ -1609,9 +1609,9 @@ function openRemoveDummy() {
 
 // ---- Admin: accounts ----
 
-function showTempPassword(user, password) {
-  sheet('Temporary password', () => [
-    h('p', {}, `Give this to ${user}. They will be asked to choose their own password when they log in. It will not be shown again.`),
+function showTempPassword(user, password, isNew) {
+  sheet(isNew ? 'First login password' : 'Temporary password', () => [
+    h('p', {}, `Give this to ${user}. They will be asked to choose their own password when they log in.${isNew ? '' : ' It will not be shown again.'}`),
     h('div', { class: 'temp-password' }, password),
   ]);
 }
@@ -1659,7 +1659,7 @@ function openUserForm(user, redraw) {
         } else {
           const result = await api('/admin/users', { method: 'POST', body: { ...body, username: data.get('username') } });
           close();
-          showTempPassword(body.displayName, result.tempPassword);
+          showTempPassword(body.displayName, result.tempPassword, true);
         }
         redraw();
       }),

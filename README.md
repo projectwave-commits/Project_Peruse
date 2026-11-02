@@ -15,8 +15,9 @@ npm run seed     (optional: loads made-up students and prefects)
 npm start
 ```
 
-Open the address it prints. Logins are in `data\initial-logins.csv`; everyone chooses their own
-password the first time they log in. Delete that file once the passwords have been handed out.
+Open the address it prints. Every new account starts with the password `Password1`, and must choose
+its own the first time it logs in. The first admin's username is `admin`. Because that password is
+public, create accounts close to when they will be used, and log in as `admin` straight after installing.
 
 ## Install on the school server
 

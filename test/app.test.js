@@ -6,6 +6,7 @@ const { createApp } = require('../server/app');
 const auth = require('../server/auth');
 const lists = require('../server/lists');
 const { searchStudents, parseStudentRows, importStudents, removeDummyData } = require('../server/students');
+const { ensureFirstAdmin } = require('../server/setup');
 
 const d = (id, student, extra = {}) => ({
   id, student_id: student, label: 'C2: Lateness', straight_to_list: 0, reported_by: null, created_at: `2026-11-0${id}T08:00:00.000Z`, ...extra,
@@ -155,6 +156,45 @@ test('security: logins, roles, CSRF and forced password change', async (t) => {
   const limited = s.client();
   for (let i = 0; i < 8; i++) await limited.call('/login', { method: 'POST', body: { username: 'p2', password: 'wrong' } });
   assert.equal((await limited.login('p2')).status, 429);
+});
+
+test('every new account starts with the default password and must replace it', async (t) => {
+  const s = await startServer();
+  t.after(s.close);
+  const admin = await s.as('admin');
+  const created = await admin('/admin/users', { method: 'POST', body: { username: 'newbie', displayName: 'New One', role: 'prefect' } });
+  assert.equal(created.status, 201);
+  assert.equal(created.body.tempPassword, 'Password1');
+
+  const newbie = s.client();
+  assert.equal((await newbie.call('/login', { method: 'POST', body: { username: 'newbie', password: 'Password1' } })).status, 200);
+  assert.equal((await newbie.call('/students?q=moyo')).status, 403, 'nothing works until it is changed');
+  const change = (newPassword) => newbie.call('/me/password', { method: 'POST', body: { currentPassword: 'Password1', newPassword } });
+  assert.equal((await change('Password1')).status, 400);
+  assert.equal((await change('password1')).status, 400, 'nor the same word in another case');
+  assert.equal((await newbie.call('/students?q=moyo')).status, 403);
+  assert.equal((await change('my-own-password')).status, 200);
+  assert.equal((await newbie.call('/students?q=moyo')).status, 200);
+
+  const again = s.client();
+  assert.equal((await again.call('/login', { method: 'POST', body: { username: 'newbie', password: 'Password1' } })).status, 401, 'the default no longer works');
+
+  // Resets stay random, so a reset cannot be guessed.
+  const reset = await admin(`/admin/users/${userId(s, 'newbie')}/reset-password`, { method: 'POST', body: {} });
+  assert.notEqual(reset.body.tempPassword, 'Password1');
+
+  // A brand new database gets the same first admin.
+  const db = openDb(':memory:');
+  t.after(() => db.close());
+  const realLog = console.log;
+  console.log = () => {};
+  ensureFirstAdmin(db);
+  console.log = realLog;
+  const first = db.prepare("SELECT password_hash, must_change_password FROM users WHERE username = 'admin'").get();
+  assert.equal(first.must_change_password, 1);
+  assert.ok(auth.verifyPassword('Password1', first.password_hash));
+  ensureFirstAdmin(db);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM users').get().n, 1);
 });
 
 test('prefects cannot see who else recorded a demerit, or their notes', async (t) => {

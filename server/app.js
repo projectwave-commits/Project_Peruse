@@ -126,7 +126,9 @@ function createApp(db, { secureCookies = false, cookiePath = '/' } = {}) {
     if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD) {
       throw new HttpError(400, `The new password needs at least ${MIN_PASSWORD} characters.`);
     }
-    if (newPassword === currentPassword) throw new HttpError(400, 'Please choose a different password.');
+    if (newPassword === currentPassword || newPassword.toLowerCase() === auth.DEFAULT_PASSWORD.toLowerCase()) {
+      throw new HttpError(400, 'Please choose a different password.');
+    }
     db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(auth.hashPassword(newPassword), req.user.id);
     auth.deleteUserSessions(db, req.user.id);
     setCookie(res, auth.createSession(db, req.user.id));
@@ -650,7 +652,7 @@ function createApp(db, { secureCookies = false, cookiePath = '/' } = {}) {
   };
 
   admin.post('/users', (req, res) => {
-    const password = auth.tempPassword();
+    const password = auth.DEFAULT_PASSWORD;
     try {
       db.prepare(
         `INSERT INTO users (username, display_name, role, password_hash, must_change_password, created_at) VALUES (?, ?, ?, ?, 1, ?)`
