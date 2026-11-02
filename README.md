@@ -53,13 +53,14 @@ run the script again, and restart the app. Everyone logs in once more, and old b
 
 ### Releasing a new version
 
-`dev` is where changes are made and tested. `prod` is what the server runs, and only receives approved work.
+`dev` and `prod` always hold the same code, so every change is pushed to both. A change reaches the
+school only when the server pulls it.
 
 ```
-git push origin dev:prod          (from the development PC, once approved)
+git push origin dev dev:prod
 ```
 
-Then on the server, in `C:\Project_Peruse`, as administrator:
+Then, once the change is approved, on the server, in `C:\Project_Peruse`, as administrator:
 
 ```
 git pull
@@ -69,6 +70,9 @@ schtasks /Run /TN "Prefects App"
 ```
 
 If the push is rejected, `prod` has commits that `dev` lacks. Merge `prod` into `dev` first. Do not force-push.
+
+`fake-data` is a separate branch for trying the app with invented students. It takes code from `dev`, and is
+never merged back. Accounts are shared with the real database, but students, demerits and lists are not.
 
 ### Turn on HTTPS
 
