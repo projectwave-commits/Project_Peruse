@@ -34,19 +34,61 @@ class ApiError extends Error {
   }
 }
 
-async function api(path, { method = 'GET', body } = {}) {
-  let res;
+const READ_TIMEOUT_MS = 8000;
+const SEND_TIMEOUT_MS = 60000; // Student list imports can be large.
+const READ_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 1000;
+const GATEWAY_ERRORS = [502, 503, 504];
+
+// The timer also covers reading the body, as a connection can stall part way through a response.
+// data is null when the body is not JSON, which includes a response that was cut off.
+async function attempt(path, method, body, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    res = await fetch(`api${path}`, {
+    const res = await fetch(`api${path}`, {
       method,
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'prefects-app' },
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
     });
-  } catch {
-    throw new ApiError(0, { error: 'Cannot reach the server. Are you on the school network?' });
+    const raw = await res.text();
+    let data = null;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      // Left as null for the caller to judge.
+    }
+    return { res, data };
+  } finally {
+    clearTimeout(timer);
   }
-  const data = await res.json().catch(() => ({}));
+}
+
+async function api(path, { method = 'GET', body } = {}) {
+  const isRead = method === 'GET';
+  const incomplete = (r) => !r || (r.res.ok && r.data === null);
+  let result = null;
+  // Only reads are repeated: repeating a send could record the same demerit twice.
+  for (let left = isRead ? READ_ATTEMPTS : 1; left > 0; left -= 1) {
+    try {
+      result = await attempt(path, method, body, isRead ? READ_TIMEOUT_MS : SEND_TIMEOUT_MS);
+    } catch {
+      result = null;
+    }
+    if (!incomplete(result) && !GATEWAY_ERRORS.includes(result.res.status)) break;
+    if (left > 1) await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+  }
+  if (incomplete(result)) {
+    throw new ApiError(0, {
+      error: isRead
+        ? 'Cannot reach the server. Are you on the school network?'
+        : 'The server did not answer, so this may not have saved. Check before trying again.',
+    });
+  }
+  const { res } = result;
+  const data = result.data || {};
   if (!res.ok) {
     if (res.status === 401 && me) {
       me = null;
@@ -209,7 +251,9 @@ function loading(title, opts) {
 }
 
 function failure(title, opts, err) {
-  page(title, opts, h('div', { class: 'error' }, err.message));
+  page(title, opts,
+    h('div', { class: 'error' }, err.message),
+    h('button', { class: 'btn block', type: 'button', onclick: () => route() }, 'Try again'));
 }
 
 // ---- Login ----
@@ -990,7 +1034,7 @@ function openEditList(list, redraw) {
 
 function adminListActions(list, entries, redraw) {
   const post = (path) => api(`/admin/lists/${list.id}${path}`, { method: 'POST', body: {} });
-  const download = h('a', { class: 'btn', href: `api/admin/lists/${list.id}/export.docx` }, 'Download Word');
+  const download = h('a', { class: 'btn', href: `api/admin/lists/${list.id}/export.docx` }, 'Download list');
   const edit = h('button', { class: 'btn', onclick: () => openEditList(list, redraw) }, 'Edit details');
   if (list.status === 'draft') {
     return [
@@ -1770,11 +1814,29 @@ function route() {
 
 window.addEventListener('hashchange', route);
 
-(async function start() {
+function startScreen(...children) {
+  root.replaceChildren(
+    h('div', { class: 'login' },
+      h('img', { src: 'logo.png', alt: 'Hellenic Academy' }),
+      h('h1', {}, 'Prefects'),
+      children));
+}
+
+async function start() {
+  startScreen(h('p', { class: 'empty' }, 'Loading…'));
   try {
     me = await api('/me');
-  } catch {
+  } catch (err) {
     me = null;
+    // Only a 401 means logged out. A network fault must not look like a lost login.
+    if (err.status !== 401) {
+      startScreen(
+        h('div', { class: 'error', role: 'alert' }, err.message),
+        h('button', { class: 'btn primary block', type: 'button', onclick: start }, 'Try again'));
+      return;
+    }
   }
   route();
-})();
+}
+
+start();
