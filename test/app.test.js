@@ -588,7 +588,7 @@ test('behind nginx the login limiter tells phones apart, and the cookie can be s
   assert.equal((await attempt('10.0.0.1')).status, 429);
   assert.equal((await attempt('10.0.0.2')).status, 401, 'another phone is not locked out');
 
-  const scoped = createApp(s.db, { cookiePath: '/prefect/', secureCookies: true }).listen(0);
+  const scoped = createApp(s.db, { cookiePath: '/demerits/', secureCookies: true }).listen(0);
   t.after(() => { scoped.close(); scoped.closeAllConnections(); });
   await new Promise((resolve) => scoped.once('listening', resolve));
   const res = await fetch(`http://127.0.0.1:${scoped.address().port}/api/login`, {
@@ -597,7 +597,7 @@ test('behind nginx the login limiter tells phones apart, and the cookie can be s
     body: JSON.stringify({ username: 'p2', password: 'password123' }),
   });
   const cookie = res.headers.get('set-cookie');
-  assert.match(cookie, /Path=\/prefect\//);
+  assert.match(cookie, /Path=\/demerits\//);
   assert.match(cookie, /Secure/);
 });
 
