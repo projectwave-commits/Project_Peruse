@@ -726,7 +726,7 @@ function createApp(db, { secureCookies = false, cookiePath = '/' } = {}) {
     return db.prepare(sql).all(...params);
   }
 
-  const statusOf = (d) => (d.voided_at ? 'Cancelled' : d.list_entry_id ? 'On a list' : d.expired_at ? 'Earlier term' : 'Waiting');
+  const statusOf = (d) => (d.voided_at ? 'Cancelled' : d.list_entry_id ? 'On a list' : d.expired_at ? 'Earlier year' : 'Waiting');
 
   admin.get('/demerits', (req, res) => res.json(logQuery(req.query, LOG_LIMIT)));
 

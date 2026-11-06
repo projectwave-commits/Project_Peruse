@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="220" height="170" viewBox="0 0 220 170">
-  <g fill="none" stroke="#123f7a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <g fill="none" stroke="#3a8d9e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
     <!-- clipboard -->
     <path d="M62 30c20-2 62-2 84 0 2 34 2 90 0 124-24 2-62 2-84 0-2-34-2-90 0-124z" fill="#ffffff"/>
-    <path d="M86 22h36c2 4 2 12 0 16H86c-2-4-2-12 0-16z" fill="#bcd6f2"/>
+    <path d="M86 22h36c2 4 2 12 0 16H86c-2-4-2-12 0-16z" fill="#a9d3db"/>
     <!-- ticks and a cross, like the register -->
     <path d="M76 62l5 6 9-12" stroke="#17693a"/>
     <path d="M100 62c12-1 24-1 34 0"/>
@@ -11,7 +11,7 @@
     <path d="M77 110l11 11M88 110l-11 11" stroke="#b3261e"/>
     <path d="M100 116c12-1 22-1 32 0"/>
     <!-- magnifying glass -->
-    <circle cx="156" cy="110" r="24" fill="#e6eef9" fill-opacity=".85"/>
+    <circle cx="156" cy="110" r="24" fill="#d3e4e6" fill-opacity=".85"/>
     <path d="M173 128l22 23" stroke-width="6"/>
     <path d="M144 104c2-6 7-9 13-9" stroke-width="2.5"/>
     <!-- sparks -->

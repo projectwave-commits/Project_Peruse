@@ -334,7 +334,7 @@ function voidDemerit(db, demeritId, reason, user) {
   if (d.voided_at) throw new HttpError(409, 'This demerit has already been cancelled.');
   if (user.role !== 'admin' && d.created_by !== user.id) throw new HttpError(403, 'You can only cancel demerits you recorded.');
   if (d.list_entry_id) throw new HttpError(409, 'This demerit is already on a list. Use "Query" on the list instead.');
-  if (d.expired_at) throw new HttpError(409, 'This demerit is from an earlier term and no longer counts.');
+  if (d.expired_at) throw new HttpError(409, 'This demerit is from an earlier school year and no longer counts.');
   db.prepare('UPDATE demerits SET voided_at = ?, voided_by = ?, void_reason = ? WHERE id = ?').run(
     new Date().toISOString(), user.id, reason, demeritId
   );
@@ -348,7 +348,7 @@ function leftoverDemerits(db) {
 
 /**
  * Part-way counts go back to zero, and those demerits stay in the history. Students who already
- * reached the limit stay due for the next list, as do no-shows: they owe that from last term.
+ * reached the limit stay due for the next list, as do no-shows: they owe that from last year.
  */
 function startNewTerm(db, user) {
   return tx(db, () => {
@@ -364,7 +364,7 @@ function startNewTerm(db, user) {
 function undoNewTerm(db) {
   return tx(db, () => {
     const latest = db.prepare('SELECT * FROM term_starts ORDER BY id DESC LIMIT 1').get();
-    if (!latest || latest.undone_at) throw new HttpError(409, 'There is no new term to undo.');
+    if (!latest || latest.undone_at) throw new HttpError(409, 'There is no new school year to undo.');
     const restored = db.prepare('UPDATE demerits SET expired_at = NULL WHERE expired_at = ?').run(latest.started_at);
     db.prepare('UPDATE term_starts SET undone_at = ? WHERE id = ?').run(new Date().toISOString(), latest.id);
     return Number(restored.changes);

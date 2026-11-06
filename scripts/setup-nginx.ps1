@@ -59,4 +59,4 @@ try {
     Write-Warning 'The app is not answering on port 3080. Run scripts\install-windows.ps1 and check the Prefects App scheduled task.'
 }
 Write-Host 'Now check from a phone: http://10.2.0.190/demerits/ should open the app.'
-Write-Host 'Also check the Meraki ngrok address with /demerits/ on the end: it should say 403 Forbidden.'
+Write-Host 'Also check the ngrok address with /demerits/ on the end: it should say 403 Forbidden.'

@@ -423,7 +423,7 @@ test('a missed manual puts the student back on the next manual list, without a n
   assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM demerits').get().n, 2);
 });
 
-test('a new term resets part-way counts only, and can be undone', async (t) => {
+test('a new school year resets part-way counts only, and can be undone', async (t) => {
   const s = await startServer();
   t.after(s.close);
   const p1 = await s.as('p1');
@@ -444,13 +444,13 @@ test('a new term resets part-way counts only, and can be undone', async (t) => {
   assert.equal((await admin('/admin/term/start', { method: 'POST', body: {} })).body.cleared, 1);
 
   assert.equal((await dressCount(moyo)).count, 0);
-  assert.equal((await dressCount(oconnor)).listed, 1, 'reached the limit last term, so still due');
+  assert.equal((await dressCount(oconnor)).listed, 1, 'reached the limit last year, so still due');
   const record = (await p1(`/students/${moyo}`)).body.demerits.find((d) => d.label === 'Grooming');
   assert.equal(record.expired, true, 'kept in the history');
   assert.equal(record.can_cancel, false);
   assert.equal((await p1(`/demerits/${record.id}/cancel`, { method: 'POST', body: {} })).status, 409);
 
-  // One demerit in the new term does not combine with last term's.
+  // One demerit in the new year does not combine with last year's.
   const fresh = await give(moyo, 'Grooming');
   assert.equal(fresh.status, 201, 'an expired demerit does not trigger the duplicate warning');
   assert.equal(fresh.body.tally.count, 1);
@@ -461,7 +461,7 @@ test('a new term resets part-way counts only, and can be undone', async (t) => {
   await admin(`/admin/lists/${list}`, { method: 'DELETE' });
 
   const csv = (await admin('/admin/demerits.csv')).body.toString();
-  assert.match(csv, /Earlier term/);
+  assert.match(csv, /Earlier year/);
 
   assert.equal((await admin('/admin/term/undo', { method: 'POST', body: {} })).body.restored, 1);
   assert.equal((await dressCount(moyo)).listed, 1, 'old and new demerits now combine');

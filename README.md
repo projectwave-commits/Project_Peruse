@@ -122,7 +122,7 @@ The `data` folder holds student disciplinary records. Restrict it to administrat
   Admin page, one per prefect per list until dismissed.
 - Prefects on duty and admins can end the session. That marks anyone unmarked as a no-show, and
   no-shows go on the next list of that type.
-- At the start of each term, an admin presses Admin > Start new term. Part-way counts go back to zero
+- At the start of each school year, an admin presses Admin > Start new school year. Part-way counts go back to zero
   and stay in the history. Students who already reached the limit, and no-shows, still go on the next list.
 
 ## Tests

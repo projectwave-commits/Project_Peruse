@@ -208,6 +208,8 @@ const ICONS = {
   lists: '<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
   mine: '<path d="M12 3v3M5 21h14M7 21V9h10v12M10 13h4"/>',
   admin: '<path d="M12 3 4 7v5c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>',
 };
 
 function icon(name) {
@@ -218,6 +220,23 @@ function icon(name) {
   template.innerHTML = ICONS[name];
   svg.append(...template.childNodes);
   return svg;
+}
+
+// Shows the mode it switches to: a sun in dark mode, a moon in light mode.
+function themeButton() {
+  const button = h('button', { type: 'button', class: 'icon-btn theme-btn' });
+  const show = () => {
+    const next = window.siteTheme.current() === 'light' ? 'dark' : 'light';
+    button.replaceChildren(icon(next === 'light' ? 'sun' : 'moon'));
+    button.setAttribute('aria-label', next === 'light' ? 'Light mode' : 'Dark mode');
+    button.title = button.getAttribute('aria-label');
+  };
+  button.addEventListener('click', () => {
+    window.siteTheme.set(window.siteTheme.current() === 'light' ? 'dark' : 'light');
+    show();
+  });
+  show();
+  return button;
 }
 
 function page(title, { back, active, actions, mainClass } = {}, ...content) {
@@ -231,10 +250,13 @@ function page(title, { back, active, actions, mainClass } = {}, ...content) {
     h('header', { class: 'topbar' },
       back && h('a', { class: 'icon-btn back', href: back, 'aria-label': 'Back' }, '‹'),
       h('h1', {}, title),
+      themeButton(),
       actions || null),
     h('main', { class: mainClass }, h('div', { class: 'stack' }, content)),
-    h('nav', { class: 'nav', 'aria-label': 'Main' }, tabs.map(([key, href, label, ic]) =>
-      h('a', { href, 'aria-current': active === key ? 'page' : null, 'data-tab': key }, icon(ic), label)))
+    h('nav', { class: 'nav', 'aria-label': 'Main' },
+      h('div', { class: 'nav-brand' }, 'Hellenic Prefects'),
+      tabs.map(([key, href, label, ic]) =>
+        h('a', { href, 'aria-current': active === key ? 'page' : null, 'data-tab': key }, icon(ic), label)))
   );
   window.scrollTo(0, 0);
   if (me.role === 'admin') refreshAdminBadge();
@@ -691,7 +713,7 @@ function historyItem(d, studentId) {
       d.note && h('div', { class: 'small' }, d.note),
       d.voided && h('div', { class: 'small muted' }, `Cancelled${d.void_reason ? `: ${d.void_reason}` : ''}`),
       !d.voided && d.on_list && h('span', { class: 'badge amber' }, 'On a list'),
-      !d.voided && d.expired && h('span', { class: 'badge grey' }, 'Earlier term, no longer counts')),
+      !d.voided && d.expired && h('span', { class: 'badge grey' }, 'Earlier year, no longer counts')),
     d.can_cancel && h('button', {
       class: 'btn small subtle-danger',
       onclick: guarded(async () => {
@@ -781,7 +803,7 @@ async function renderMine() {
               h('div', { class: 'muted small' }, `${listShort(d.list_type)} · ${fmtDateTime(d.created_at)}`)),
             d.voided_at ? h('span', { class: 'badge grey' }, 'Cancelled')
               : d.list_entry_id ? h('span', { class: 'badge amber' }, 'On a list')
-              : d.expired_at ? h('span', { class: 'badge grey' }, 'Earlier term')
+              : d.expired_at ? h('span', { class: 'badge grey' }, 'Earlier year')
               : h('span', { class: 'badge' }, 'Waiting'))))
       : h('p', { class: 'empty' }, 'You have not recorded any demerits yet.'));
 }
@@ -1120,9 +1142,9 @@ const hourAngle = (d) => (((d.getHours() % 12) + d.getMinutes() / 60) / 12) * 36
 // the start is shaded; after that a sweep would overlap itself, so the shading goes.
 function clockFace(started) {
   const hand = (width, colour) => svgEl('line', { x1: FACE_CENTRE, y1: FACE_CENTRE, stroke: colour, 'stroke-width': width, 'stroke-linecap': 'round' });
-  const spent = svgEl('path', { fill: '#123f7a', 'fill-opacity': '.8' });
+  const spent = svgEl('path', { fill: '#3a8d9e', 'fill-opacity': '.55' });
   const hourHand = hand(6, '#111827');
-  const minuteHand = hand(4, '#0ea5e9');
+  const minuteHand = hand(4, '#2a6f7e');
   const svg = svgEl('svg', { class: 'clock-face', viewBox: '0 0 200 200', 'aria-hidden': 'true' });
   svg.append(
     svgEl('circle', { cx: FACE_CENTRE, cy: FACE_CENTRE, r: FACE_RADIUS + 6, fill: '#fff', stroke: '#d1d5db', 'stroke-width': 2 }),
@@ -1402,7 +1424,7 @@ async function renderAdmin() {
         h('div', { class: 'num' }, String(p.fromDemerits + p.carried)),
         h('div', { class: 'state' }, `${p.waiting} demerit${p.waiting === 1 ? '' : 's'} waiting`)))),
     h('button', { class: 'btn primary block', onclick: guarded(openNewList) }, 'Create a new list'),
-    h('h2', { class: 'section-title' }, 'Term'),
+    h('h2', { class: 'section-title' }, 'School year'),
     termCard(summary.term),
     h('h2', { class: 'section-title' }, 'Manage'),
     h('div', { class: 'card tight' },
@@ -1416,38 +1438,38 @@ function termCard(term) {
   const { latest, leftover } = term;
   const canUndo = latest && !latest.undone_at;
   return h('div', { class: 'card stack' },
-    h('p', { class: 'small' }, `Starting a new term resets ${leftover} waiting demerit${leftover === 1 ? '' : 's'} to zero. They stay in each student's history.`),
+    h('p', { class: 'small' }, `Starting a new school year resets ${leftover} waiting demerit${leftover === 1 ? '' : 's'} to zero. They stay in each student's history.`),
     canUndo && h('p', { class: 'small muted' },
       `Last started ${fmtDate(latest.started_at, true)}${latest.started_by_name ? ` by ${latest.started_by_name}` : ''}, resetting ${latest.demerits_cleared}.`),
     h('button', {
       class: 'btn block',
       onclick: guarded(async () => {
         const yes = await confirmSheet({
-          title: 'Start a new term?',
+          title: 'Start a new school year?',
           message: `${leftover} waiting demerit${leftover === 1 ? '' : 's'} will stop counting, so those students start again from zero.\n\nStudents who already reached the limit, and no-shows, still go on the next list.`,
-          action: 'Start new term',
+          action: 'Start new school year',
           danger: true,
         });
         if (!yes) return;
         const { cleared } = await api('/admin/term/start', { method: 'POST', body: {} });
-        toast(`New term started. ${cleared} demerit${cleared === 1 ? '' : 's'} reset.`);
+        toast(`New school year started. ${cleared} demerit${cleared === 1 ? '' : 's'} reset.`);
         renderAdmin();
       }),
-    }, 'Start new term'),
+    }, 'Start new school year'),
     canUndo && h('button', {
       class: 'btn block',
       onclick: guarded(async () => {
         const yes = await confirmSheet({
-          title: 'Undo the new term?',
+          title: 'Undo the new school year?',
           message: `The ${latest.demerits_cleared} demerit${latest.demerits_cleared === 1 ? '' : 's'} reset on ${fmtDate(latest.started_at)} will count again. Demerits recorded since then are not affected.`,
-          action: 'Undo new term',
+          action: 'Undo new school year',
         });
         if (!yes) return;
         await api('/admin/term/undo', { method: 'POST', body: {} });
-        toast('New term undone.');
+        toast('New school year undone.');
         renderAdmin();
       }),
-    }, 'Undo last new term'));
+    }, 'Undo last new school year'));
 }
 
 // ---- Admin: demerit types ----
@@ -1754,7 +1776,7 @@ async function renderLog(params) {
                 h('div', { class: 'small muted' }, `${fmtDateTime(d.created_at)} · ${d.created_by_name}${d.reported_by ? ` for ${d.reported_by}` : ''}`),
                 d.note && h('div', { class: 'small' }, d.note)),
               h('span', { class: `badge ${d.voided_at || (d.expired_at && !d.list_entry_id) ? 'grey' : d.list_entry_id ? 'amber' : ''}` },
-                d.voided_at ? 'Cancelled' : d.list_entry_id ? 'On a list' : d.expired_at ? 'Earlier term' : 'Waiting'))))
+                d.voided_at ? 'Cancelled' : d.list_entry_id ? 'On a list' : d.expired_at ? 'Earlier year' : 'Waiting'))))
         : h('p', { class: 'empty' }, 'No demerits match.'));
     } catch (err) {
       results.replaceChildren(h('div', { class: 'error' }, err.message));
@@ -1774,7 +1796,7 @@ async function renderLog(params) {
     }),
     h('div', { class: 'tallies' },
       choose('type', 'List', [['', 'Both lists'], ['dress', 'Dress Parade'], ['manual', 'Manual Labour']]),
-      choose('status', 'Status', [['', 'Any status'], ['waiting', 'Waiting'], ['listed', 'On a list'], ['earlier', 'Earlier term'], ['cancelled', 'Cancelled']])),
+      choose('status', 'Status', [['', 'Any status'], ['waiting', 'Waiting'], ['listed', 'On a list'], ['earlier', 'Earlier year'], ['cancelled', 'Cancelled']])),
     filters.prefect && h('a', { class: 'btn small', href: '#/admin/log' }, 'Showing one prefect. Show everyone'),
     csv,
     results,
