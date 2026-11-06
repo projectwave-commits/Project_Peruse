@@ -5,12 +5,16 @@ own folder, database and Windows scheduled task, and nginx puts them all under o
 
 | Folder | Address | What it is | Port |
 |---|---|---|---|
-| `home/` | `/home/` | Staff home page that links to the apps. Plain files, served by nginx | none |
+| `home/` | `/home/` | The one sign-in page. Prefects go on to demerits; staff see every app. Plain files, served by nginx | none |
 | `demerits/` | `/demerits/` | Prefect demerits, Dress Parade and Manual Labour lists | 3080 |
 | `sign-ups/` | `/sign_ups/` | Sports and club options | 3081 |
 
 `scripts/` holds the nginx route for each app and one script that installs them all. More apps can be added
 as new folders, each with a route file listed in `scripts/setup-nginx.ps1` and a link in `home/public/index.html`.
+
+Everyone signs in on the home page with an account from the demerits app (prefects, and admins as staff).
+The sign-in cookie is shared, so set `COOKIE_PATH=/` in `demerits/.env`. Staff are planned to sign in with
+their main portal accounts later.
 
 Each app's own README covers running it, its tests and its settings. `npm test` here runs every app's tests.
 

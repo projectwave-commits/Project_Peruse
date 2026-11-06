@@ -37,7 +37,7 @@ If phones use a different subnet (a separate Wi-Fi network), widen the firewall 
 Use this when the server already hosts another site, so the app appears at an address like
 `http://10.2.0.190/demerits/`. The steps above still apply, except that no port is opened to phones.
 
-1. Copy `.env.example` to `.env`, and set `HOST=127.0.0.1` and `COOKIE_PATH=/demerits/`. Do this before
+1. Copy `.env.example` to `.env`, and set `HOST=127.0.0.1` and `COOKIE_PATH=/`. Do this before
    running the install script. If the port is not 3080, change it in `../scripts/nginx-prefect.conf` as well.
 2. Run the install script as above, then, as administrator, from the repository folder:
    `powershell -ExecutionPolicy Bypass -File scripts\setup-nginx.ps1`
@@ -50,8 +50,15 @@ Check that from outside after any change. If the server's address changes, updat
 
 If nginx serves HTTPS, also set `SECURE_COOKIES=1` in `.env`, and restart the app.
 
-To move to another address, change `/demerits` in `../scripts/nginx-prefect.conf` and `COOKIE_PATH` in `.env`,
-run the script again, and restart the app. Everyone logs in once more. Keep a redirect from the old address, as the config does for `/prefect`, so old bookmarks still work.
+To move to another address, change `/demerits` in `../scripts/nginx-prefect.conf`, run the script again, and
+restart the app. Keep a redirect from the old address, as the config does for `/prefect`, so old bookmarks still work.
+
+### One sign-in for every app
+
+Nobody logs in here. Everyone signs in once on the home page at `/home/`, which uses this app's accounts:
+prefects go straight to demerits, and admins are staff, who see every app. The sign-in cookie has the
+path `/` (`COOKIE_PATH=/`), so the home page and the sign-ups app can use it too. Sign-ups asks this app's
+`/api/me` who is signed in. Staff are planned to move to their main portal accounts later.
 
 ### Releasing a new version
 

@@ -422,7 +422,7 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, .6); }
     border-top: 0;
     border-right: 1px solid var(--bar-line);
   }
-  .nav-brand { display: block; padding: 10px 12px 18px; font-size: 17px; font-weight: 700; color: var(--on-bar); }
+  .nav-brand { display: block; padding: 10px 12px 18px; font-size: 17px; font-weight: 700; color: var(--on-bar); text-decoration: none; }
   .nav a {
     flex: none;
     max-width: none;

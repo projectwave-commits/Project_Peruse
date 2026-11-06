@@ -9,7 +9,7 @@ $node = (Get-Command node.exe).Source
 
 $envFile = Join-Path $root '.env'
 if (-not (Test-Path $envFile)) {
-    Set-Content -Path $envFile -Value @('PORT=3081', 'HOST=127.0.0.1', 'COOKIE_PATH=/sign_ups/')
+    Set-Content -Path $envFile -Value @('PORT=3081', 'HOST=127.0.0.1')
     Write-Host 'Created .env for running behind nginx at /sign_ups/.'
 }
 

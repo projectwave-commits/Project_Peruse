@@ -1,11 +1,10 @@
 const os = require('node:os');
 const fs = require('node:fs');
 const path = require('node:path');
-const crypto = require('node:crypto');
 const express = require('express');
 
 const {
-  db, tx, now, audit, getSetting, setSetting, seedConfig, setPassword, checkPassword, ensurePassword, backup,
+  db, tx, now, audit, getSetting, setSetting, seedConfig, backup,
 } = require('./src/db');
 const {
   allOptions, getOption, getStudent, isEligible, optionCounts, unavailableReason,
@@ -17,8 +16,9 @@ const { formWorkbook, rosterWorkbook, allRostersWorkbook, rosterRows } = require
 
 const PORT = process.env.PORT === undefined ? 3000 : Number(process.env.PORT);
 const HOST = process.env.HOST || '0.0.0.0';
-// Behind nginx at a sub-path, this keeps the staff login out of the other apps on the same server.
-const COOKIE_PATH = process.env.COOKIE_PATH || '/';
+// Staff sign in once, on the home page, with an account from the demerits app. This asks that app whose
+// session a request carries. Staff are planned to sign in with their main portal accounts instead.
+const SIGN_IN_URL = process.env.SIGN_IN_URL || 'http://127.0.0.1:3080/api/me';
 const CLASS_LIST_DIR = process.env.CLASS_LIST_DIR ?? path.join(__dirname, 'class-lists');
 
 const app = express();
@@ -187,12 +187,11 @@ app.post('/api/students/:id/submit', requireOpen, (req, res) => {
   res.json({ ok: true });
 });
 
-// ---- Staff login -------------------------------------------------------------
-const SESSION_MS = 12 * 60 * 60 * 1000;
-const sessions = new Map();
-const loginFailures = new Map();
-const LOCK_AFTER = 8;
-const LOCK_MS = 5 * 60 * 1000;
+// ---- Staff sign-in -----------------------------------------------------------
+const SIGN_IN_COOKIE = 'prefects_session';
+// A short memory of answers, so each click does not ask the demerits app again.
+const CHECK_MS = 30 * 1000;
+const checked = new Map();
 
 function readCookie(req, name) {
   for (const part of (req.headers.cookie || '').split(';')) {
@@ -202,58 +201,42 @@ function readCookie(req, name) {
   return null;
 }
 
-function staffSession(req) {
-  const token = readCookie(req, 'staff');
-  const session = token && sessions.get(token);
-  if (!session) return null;
-  if (session.expires < Date.now()) {
-    sessions.delete(token);
+async function signedInUser(req) {
+  const token = readCookie(req, SIGN_IN_COOKIE);
+  if (!token) return null;
+  const known = checked.get(token);
+  if (known && known.until > Date.now()) return known.user;
+  // Only the sign-in cookie is passed on, never the request's other cookies.
+  const res = await fetch(SIGN_IN_URL, { headers: { cookie: `${SIGN_IN_COOKIE}=${token}` }, signal: AbortSignal.timeout(5000) });
+  if (res.status === 401) {
+    checked.delete(token);
     return null;
   }
-  return session;
+  if (!res.ok) throw new Error(`The sign-in check answered ${res.status}.`);
+  const user = await res.json();
+  if (checked.size > 1000) checked.clear();
+  checked.set(token, { user, until: Date.now() + CHECK_MS });
+  return user;
 }
 
-function requireStaff(req, res, next) {
-  const session = staffSession(req);
-  if (!session) return res.status(401).json({ error: 'Please sign in.' });
-  req.staff = session.name;
+async function requireStaff(req, res, next) {
+  let user;
+  try {
+    user = await signedInUser(req);
+  } catch {
+    return res.status(503).json({ error: 'Cannot check your sign-in right now. Please try again in a moment.' });
+  }
+  if (!user) return res.status(401).json({ error: 'Please sign in on the home page.' });
+  if (user.role !== 'admin' || user.must_change_password) return res.status(403).json({ error: 'This page is for staff.' });
+  req.staff = user.display_name;
   next();
 }
-
-app.post('/api/staff/login', (req, res) => {
-  const name = String(req.body?.name || '').trim().slice(0, 60);
-  const attempts = loginFailures.get(req.ip);
-  if (attempts && attempts.count >= LOCK_AFTER && attempts.until > Date.now()) {
-    fail(429, 'Too many attempts. Please wait five minutes and try again.');
-  }
-  if (!name) fail(400, 'Please enter your name.');
-  if (!checkPassword(String(req.body?.password || ''))) {
-    const count = (attempts && attempts.until > Date.now() ? attempts.count : 0) + 1;
-    loginFailures.set(req.ip, { count, until: Date.now() + LOCK_MS });
-    fail(401, 'That password is not correct.');
-  }
-  loginFailures.delete(req.ip);
-  const token = crypto.randomBytes(32).toString('base64url');
-  sessions.set(token, { name, expires: Date.now() + SESSION_MS });
-  res.set('Set-Cookie', `staff=${token}; HttpOnly; SameSite=Strict; Path=${COOKIE_PATH}; Max-Age=${SESSION_MS / 1000}`);
-  res.json({ name });
-});
-
-app.post('/api/staff/logout', (req, res) => {
-  const token = readCookie(req, 'staff');
-  if (token) sessions.delete(token);
-  res.set('Set-Cookie', `staff=; HttpOnly; SameSite=Strict; Path=${COOKIE_PATH}; Max-Age=0`);
-  res.json({ ok: true });
-});
-
-app.get('/api/staff/me', (req, res) => {
-  const session = staffSession(req);
-  res.json(session ? { name: session.name } : { name: null });
-});
 
 const staff = express.Router();
 staff.use(requireStaff);
 app.use('/api/staff', staff);
+
+staff.get('/me', (req, res) => res.json({ name: req.staff }));
 
 // ---- Progress ----------------------------------------------------------------
 staff.get('/progress', (req, res) => {
@@ -586,14 +569,6 @@ staff.patch('/settings', (req, res) => {
   res.json({ ok: true });
 });
 
-staff.post('/password', (req, res) => {
-  const password = String(req.body?.password || '');
-  if (password.length < 8) fail(400, 'Please use at least 8 characters.');
-  setPassword(password);
-  audit(req.staff, 'Staff password', 'Changed');
-  res.json({ ok: true });
-});
-
 staff.get('/audit', (req, res) => {
   res.json(db.prepare('SELECT at, actor, subject, action FROM audit ORDER BY id DESC LIMIT 300').all());
 });
@@ -657,7 +632,6 @@ async function seedStudents() {
 async function start() {
   seedConfig();
   await seedStudents();
-  const usedDefaultPassword = ensurePassword();
   return new Promise((resolve) => {
     const server = app.listen(PORT, HOST, () => {
       const { port } = server.address();
@@ -667,7 +641,7 @@ async function start() {
           if (a.family === 'IPv4' && !a.internal) console.log(`  Students: http://${a.address}:${port}/    Staff: http://${a.address}:${port}/staff`);
         }
       }
-      if (usedDefaultPassword) console.log('\nStarting staff password: Password1 (you can change it on the Setup screen).');
+      console.log('Staff sign in on the home page, with an admin account from the demerits app.');
       resolve(server);
     });
   });

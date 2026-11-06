@@ -10,7 +10,8 @@ Students choose their sports and clubs on an iPad, laptop or phone. Teachers tra
    - Students: `http://10.3.1.36:3000/`
    - Staff: `http://10.3.1.36:3000/staff`
 4. Allow port 3000 through the server's firewall so that iPads and phones can connect.
-5. Open the staff address and sign in. The starting password is `Password1`. You can change it on the **Setup** screen.
+5. Staff sign in once on the home page (`/home/`) with an admin account from the demerits app, which must be
+   running too. The staff screens ask it who is signed in, at `SIGN_IN_URL` (default `http://127.0.0.1:3080/api/me`).
 
 The app stops when the `start.bat` window is closed. To keep it running after a restart, add `start.bat` as a Windows Task Scheduler task that runs at startup.
 
@@ -53,7 +54,7 @@ To restore one, stop the app, delete `options.db-wal` and `options.db-shm` from 
 
 ## Good to know
 
-- The app uses plain HTTP, so the staff password is not encrypted on the network. Keep it on the school network, and add HTTPS before making it available over the internet.
+- The app uses plain HTTP, so staff passwords are not encrypted on the network. Keep it on the school network, and add HTTPS before making it available over the internet.
 - The class lists in `class-lists` are only read the first time the app starts. After that, use **Setup** to update them.
 - `data` and `class-lists` contain student details, so keep them private.
 
@@ -63,12 +64,12 @@ To restore one, stop the app, delete `options.db-wal` and `options.db-shm` from 
 
 ## Running at /sign_ups/ on the shared server
 
-The school server runs this behind nginx at `http://10.2.0.190/sign_ups/`, on the school network only. Staff use `http://10.2.0.190/sign_ups/staff`.
+The school server runs this behind nginx at `http://10.2.0.190/sign_ups/`, on the school network only. Staff sign in on `http://10.2.0.190/home/` and open Sign-ups from there.
 
 1. Clone the repository to `C:\Project_Peruse`. This app is in its `sign-ups` folder. In `C:\Project_Peruse\sign-ups`, run `npm ci --omit=dev`.
 2. Copy the `class-lists` folder into `C:\Project_Peruse\sign-ups` by hand. It is not in the repository, because it holds student details.
 3. As administrator, run `powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1` in the `sign-ups` folder, then `powershell -ExecutionPolicy Bypass -File scripts\setup-nginx.ps1` in `C:\Project_Peruse`, which adds the routes for every app. The other sites on that nginx are down for a few seconds.
-4. Sign in on the staff address, change the password on **Setup**, and close registration until a session is due.
+4. Sign in on the home page with a demerits admin account, open Sign-ups, and close registration until a session is due.
 
 Anyone on the school network can open the student screens while registration is open.
 

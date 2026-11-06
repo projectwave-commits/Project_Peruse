@@ -13,27 +13,10 @@ function setActiveTab(tab) {
   }
 }
 
-// ---- Login -------------------------------------------------------------------
-function viewLogin() {
-  document.getElementById('nav').hidden = true;
-  document.getElementById('logout').hidden = true;
-  render(`
-    <form id="login" class="card narrow">
-      <h1>Staff sign in</h1>
-      <label>Your name <input name="name" required autocomplete="name"></label>
-      <label>Staff password <input name="password" type="password" required autocomplete="current-password"></label>
-      <button class="button" type="submit">Sign in</button>
-    </form>`);
-  document.getElementById('login').addEventListener('submit', async (event) => {
-    event.preventDefault();
-    try {
-      const me = await api('api/staff/login', { method: 'POST', body: Object.fromEntries(new FormData(event.target)) });
-      staffName = me.name;
-      route();
-    } catch (err) {
-      toast(err.message, 'error');
-    }
-  });
+// ---- Sign-in -----------------------------------------------------------------
+// There is no sign-in here: staff sign in once on the home page.
+function goHome() {
+  location.replace('../home/');
 }
 
 // ---- Progress ----------------------------------------------------------------
@@ -530,14 +513,6 @@ async function viewSetup() {
     </section>
 
     <section class="card">
-      <h2>Staff password</h2>
-      <form id="password" class="inline-form">
-        <input name="password" type="password" minlength="8" required placeholder="New password" autocomplete="new-password" aria-label="New password">
-        <button class="button secondary" type="submit">Change</button>
-      </form>
-    </section>
-
-    <section class="card">
       <h2>Start a new term</h2>
       <p class="muted">Download this term's sheets first. This clears everyone's choices so they can register again. A backup of the database is saved first in the data/backups folder.</p>
       <form id="clear" class="inline-form">
@@ -605,12 +580,6 @@ async function viewSetup() {
     target.reset();
   }));
 
-  document.getElementById('password').addEventListener('submit', guarded(async (form, target) => {
-    await api('api/staff/password', { method: 'POST', body: Object.fromEntries(form) });
-    toast('Password changed.');
-    target.reset();
-  }));
-
   document.getElementById('clear').addEventListener('submit', guarded(async (form, target) => {
     const result = await api('api/staff/clear-choices', { method: 'POST', body: { confirm: form.get('confirm') } });
     toast(`All choices cleared. Backup saved as ${result.backup}.`);
@@ -661,13 +630,7 @@ async function route() {
       const me = await api('api/staff/me');
       staffName = me.name;
     }
-    if (!staffName) {
-      viewLogin();
-      return;
-    }
-
     document.getElementById('nav').hidden = false;
-    document.getElementById('logout').hidden = false;
     const termEl = document.getElementById('term');
     if (!termEl.textContent) termEl.textContent = (await api('api/info')).term;
 
@@ -695,19 +658,16 @@ async function route() {
   } catch (err) {
     if (err.status === 401) {
       staffName = null;
-      viewLogin();
+      goHome();
+      return;
+    }
+    if (err.status === 403) {
+      render(message('This page is for staff', 'Your account cannot open the staff screens. Go back to the home page to choose another app.'));
       return;
     }
     render(message('Something went wrong', err.message));
   }
 }
-
-document.getElementById('logout').addEventListener('click', async () => {
-  await api('api/staff/logout', { method: 'POST' });
-  staffName = null;
-  location.hash = '#/';
-  viewLogin();
-});
 
 // Whole table rows open the student. Buttons inside a row (such as Remove) keep their own action.
 app.addEventListener('click', (event) => {

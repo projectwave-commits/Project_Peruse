@@ -92,7 +92,7 @@ async function api(path, { method = 'GET', body } = {}) {
   if (!res.ok) {
     if (res.status === 401 && me) {
       me = null;
-      renderLogin();
+      goHome();
     }
     throw new ApiError(res.status, data);
   }
@@ -254,7 +254,9 @@ function page(title, { back, active, actions, mainClass } = {}, ...content) {
       actions || null),
     h('main', { class: mainClass }, h('div', { class: 'stack' }, content)),
     h('nav', { class: 'nav', 'aria-label': 'Main' },
-      h('div', { class: 'nav-brand' }, 'Hellenic Prefects'),
+      me.role === 'admin'
+        ? h('a', { class: 'nav-brand', href: '../home/', title: 'All apps' }, 'Hellenic Prefects')
+        : h('div', { class: 'nav-brand' }, 'Hellenic Prefects'),
       tabs.map(([key, href, label, ic]) =>
         h('a', { href, 'aria-current': active === key ? 'page' : null, 'data-tab': key }, icon(ic), label)))
   );
@@ -278,27 +280,12 @@ function failure(title, opts, err) {
     h('button', { class: 'btn block', type: 'button', onclick: () => route() }, 'Try again'));
 }
 
-// ---- Login ----
+// ---- Sign-in ----
 
-function renderLogin() {
-  const error = formError();
-  root.replaceChildren(
-    h('div', { class: 'login' },
-      h('img', { src: 'logo.png', alt: 'Hellenic Academy' }),
-      h('h1', {}, 'Prefects'),
-      h('form', {
-        class: 'stack',
-        onsubmit: submitter(error, async (data) => {
-          await api('/login', { method: 'POST', body: { username: data.get('username'), password: data.get('password') } });
-          me = await api('/me');
-          route();
-        }),
-      },
-      error,
-      field('Username', h('input', { name: 'username', autocomplete: 'username', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false', required: true, autofocus: true })),
-      field('Password', h('input', { name: 'password', type: 'password', autocomplete: 'current-password', required: true })),
-      h('button', { class: 'btn primary block', type: 'submit' }, 'Log in')))
-  );
+// There is no login screen here: everyone signs in once on the home page, and prefects come
+// straight back here. A first login still chooses its own password on this app's next screen.
+function goHome() {
+  location.replace('../home/');
 }
 
 function passwordForm(onDone) {
@@ -326,7 +313,8 @@ function renderForcePassword() {
       h('h1', {}, `Welcome, ${me.display_name}`),
       h('div', { class: 'stack' },
         h('p', { class: 'notice' }, 'Please choose your own password. Do not share it: every demerit is recorded under your name.'),
-        passwordForm(() => route())))
+        // Staff came from the home page and go back to it; prefects carry on here.
+        passwordForm(() => (me.role === 'admin' ? goHome() : route()))))
   );
 }
 
@@ -336,10 +324,9 @@ function logoutButton() {
     onclick: guarded(async () => {
       await api('/logout', { method: 'POST', body: {} });
       me = null;
-      location.hash = '#/';
-      renderLogin();
+      goHome();
     }),
-  }, 'Log out');
+  }, 'Sign out');
 }
 
 // ---- Find a student ----
@@ -815,6 +802,7 @@ function renderAccount() {
       h('div', { class: 'muted small' }, `${me.username} · ${me.role === 'admin' ? 'Admin' : 'Prefect'}`)),
     h('h2', { class: 'section-title' }, 'Change password'),
     h('div', { class: 'card' }, passwordForm(() => { toast('Password changed.'); go('#/'); })),
+    me.role === 'admin' && h('a', { class: 'btn block', href: '../home/' }, 'All apps'),
     logoutButton());
 }
 
@@ -1809,7 +1797,7 @@ async function renderLog(params) {
 function route() {
   renderToken += 1;
   document.querySelectorAll('dialog.sheet').forEach((d) => d.close());
-  if (!me) return renderLogin();
+  if (!me) return goHome();
   if (me.must_change_password) return renderForcePassword();
 
   const [path, queryString] = (location.hash.slice(1) || '/').split('?');
