@@ -1,0 +1,91 @@
+/* Same colours as demerits and sign-ups. Dark is the base; light overrides it. */
+:root {
+  --primary: #459bac;
+  --bg: #0f0f14;
+  --card: #1a1a2eb3;
+  --card-line: #ffffff0d;
+  --card-hover: #ffffff0a;
+  --card-shadow: none;
+  --text: #e0e0e0;
+  --muted: #a0a0b0;
+  --bar: #1a1a2e;
+  --bar-line: #ffffff0d;
+  --on-bar: #e0e0e0;
+  color-scheme: dark;
+}
+:root.light {
+  --primary: #3a8d9e;
+  --bg: #d8d5cf;
+  --card: #eae7e2;
+  --card-line: #c9c4bb;
+  --card-hover: #f2f0ec;
+  --card-shadow: 0 6px 18px #28241e14;
+  --text: #24272c;
+  --muted: #575b61;
+  --bar: #25282d;
+  --bar-line: #3a3e44;
+  --on-bar: #e6e3de;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.45 Outfit, Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .3s, color .3s;
+}
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 6px 12px 6px 16px;
+  padding-top: max(6px, env(safe-area-inset-top));
+  background: var(--bar);
+  border-bottom: 1px solid var(--bar-line);
+  color: var(--on-bar);
+}
+.title { flex: 1; font-size: 18px; font-weight: 650; }
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: inherit;
+  cursor: pointer;
+}
+.icon-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+main { max-width: 720px; margin: 0 auto; padding: 28px 16px 40px; }
+/* The crest has dark lettering, so it keeps a white plate in both themes. */
+.crest { display: block; width: 220px; max-width: 70%; margin: 0 auto 16px; padding: 8px; background: #fff; border-radius: 12px; }
+h1 { margin: 0 0 20px; font-size: 24px; text-align: center; }
+
+.apps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 110px;
+  padding: 18px;
+  background: var(--card);
+  border: 1px solid var(--card-line);
+  border-left: 4px solid var(--primary);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  color: inherit;
+  text-decoration: none;
+  transition: transform .2s, background-color .2s;
+}
+.app:hover { background: var(--card-hover); transform: translateY(-2px); }
+.app strong { font-size: 19px; }
+.app span { color: var(--muted); font-size: 14.5px; }

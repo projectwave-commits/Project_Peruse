@@ -1,9 +1,12 @@
+# Each app has its own .gitignore as well. These apply everywhere.
 node_modules/
 data/
+class-lists/
 .env
-*.pfx
-certs/
+*.xlsx
 *.db
 *.db-wal
 *.db-shm
+*.pfx
+certs/
 *.log

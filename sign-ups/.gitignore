@@ -1,0 +1,12 @@
+node_modules/
+data/
+# Student details: these must never reach GitHub.
+class-lists/
+*.xlsx
+*.db
+*.db-wal
+*.db-shm
+.env
+*.log
+# Built around the real class lists and full of real names. Stays on the development PC.
+test/app.test.js
