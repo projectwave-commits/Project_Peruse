@@ -7,6 +7,7 @@
   "engines": { "node": ">=22.13" },
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env server/index.js",
+    "add-prefects": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env server/add-prefects.js",
     "seed": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env server/seed.js",
     "test": "node --disable-warning=ExperimentalWarning --test test/app.test.js"
   },
